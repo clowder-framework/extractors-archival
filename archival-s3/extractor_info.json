@@ -1,0 +1,26 @@
+{
+  "@context": "http://clowder.ncsa.illinois.edu/contexts/extractors.jsonld",
+  "name": "ncsa.archival.s3",
+  "version": "1.0",
+  "description": "Archive files from Clowder to AWS S3",
+  "author": "Mike Lambert <lambert8@illinois.edu>",
+  "contributors": [],
+  "contexts": [],
+  "repository": [
+    {
+      "repType": "git",
+      "repUrl": "https://git.ncsa.illinois.edu/syngenta/extractors-archival-s3.git"},
+    {
+      "repType": "docker",
+      "repUrl": "clowder/extractors-archival-s3"
+    }],
+  "process": {
+    "file":
+    [
+      "s3/manualsubmission"
+    ]
+  },
+  "external_services": [],
+  "dependencies": [],
+  "bibtex": []
+}
