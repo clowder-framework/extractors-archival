@@ -6,6 +6,7 @@ import json
 import logging
 import requests
 
+from pyclowder.utils import CheckMessage
 from pyclowder.extractors import Extractor
 import pyclowder.files
 
@@ -55,33 +56,51 @@ class DiskArchiver(Extractor):
         self.logger.info('ARCHIVE_SOURCE_DIRECTORY: ' + self.archive_source)
         self.logger.info('ARCHIVE_TARGET_DIRECTORY: ' + self.archive_target)
 
-    def archive(self, file):
-        path_suffix = file.get('filepath').split(self.archive_source)[1]
+    def check_message(self, connector, host, secret_key, resource, parameters):
+        return CheckMessage.bypass
+
+    def archive(self, host, secret_key, file):
+        segments = file.get('filepath').split(self.archive_source)
+        if (len(segments) <= 1):
+            self.logger.error('Input path (%s) is not in the Clowder data directory (%s). Aborting.' % (file.get('filepath'), self.archive_source) )
+            return
+        path_suffix = segments[1]
         source_path = os.path.abspath(self.archive_source + path_suffix)
         dest_path = os.path.abspath(self.archive_target + path_suffix)
         self.logger.info('Archiving id=%s: %s -> %s' % (file['id'], source_path, dest_path))
 
+        # Move the file bytes to the archive directory
         self.moveFile(source_path, dest_path)
 
         # Call Clowder API endpoint to mark file as "archived"
-        resp = requests.post('%sapi/files/%s/archive?key=%s' % (host, resource['id'], secret_key))
+        resp = requests.post('%sapi/files/%s/archive?key=%s' % (host, file['id'], secret_key))
 
+        # IMPORTANT NOTE: /api/files/:id will now return 404 when attempting to download bytes
 
-    def unarchive(self, file):
-        path_suffix = file.get('filepath').split(self.archive_target)
+    def unarchive(self, host, secret_key, file):
+        # Build up the path to our archived file bytes
+        # NOTE: loader_id / filepath still reflects a Clowder data path
+        segments = file.get('filepath').split(self.archive_source)
+        if (len(segments) <= 1):
+            self.logger.error('Input path (%s) is not in the Clowder data directory (%s). Aborting.' % (file.get('filepath'), self.archive_source) )
+            return
+        path_suffix = segments[1]
         source_path = os.path.abspath(self.archive_target + path_suffix)
         dest_path = os.path.abspath(self.archive_source + path_suffix)
         self.logger.info('Unarchiving id=%s: %s -> %s' % (file['id'], source_path, dest_path))
 
+        # Move the file bytes back to the Clowder data directory
         self.moveFile(source_path, dest_path)
 
         # Call Clowder API endpoint to mark file as "archived"
-        resp = requests.post('%sapi/files/%s/unarchive?key=%s' % (host, resource['id'], secret_key))
+        resp = requests.post('%sapi/files/%s/unarchive?key=%s' % (host, file['id'], secret_key))
 
 
     def moveFile(self, source, dest):
         # Ensure destination folder exists
         os.makedirs(os.path.dirname(dest), exist_ok=True)
+
+        # Move the file bytes
         shutil.move(source, dest)
 
 
@@ -108,10 +127,10 @@ class DiskArchiver(Extractor):
 
             if operation and operation == 'unarchive':
                 # If unarchiving, move the file from target to source
-                self.unarchive(file)
+                self.unarchive(host, secret_key, file)
             elif operation and operation == 'archive':
                 # If archiving, move the file from source to target
-                self.archive(file)
+                self.archive(host, secret_key, file)
             else:
                 self.logger.error('Unrecognized operation specified... aborting: ' + str(operation))
                 return
