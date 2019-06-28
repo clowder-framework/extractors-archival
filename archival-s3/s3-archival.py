@@ -109,6 +109,23 @@ class S3Archiver(Extractor):
        except ClientError as e:
            self.logger.error(e)
 
+    def archive(self, host, secret_key, file):
+        object_key = file.get('object-key')
+        self.logger.info('Archive: Changing S3 Storage Class from Default to RR')
+        obj = self.get_object(object_key)
+        self.change_storage_class(obj, 'REDUCED_REDUNDANCY')
+
+        # Call Clowder API endpoint to mark file as "archived"
+        resp = requests.post('%sapi/files/%s/archive?key=%s' % (host, file['id'], secret_key))
+
+    def unarchive(self, host, secret_key, file):
+        self.logger.info('Unarchive: Changing S3 Storage Class back from RR to Default')
+        object_key = file.get('object-key')
+        obj = self.get_object(object_key)
+        self.change_storage_class(obj, 'STANDARD')
+
+        # Call Clowder API endpoint to mark file as "unarchived"
+        resp = requests.post('%sapi/files/%s/unarchive?key=%s' % (host, file['id'], secret_key))
 
     def process_message(self, connector, host, secret_key, resource, parameters):
         action = parameters.get('action')
@@ -118,65 +135,32 @@ class S3Archiver(Extractor):
         # Parse user parameters to determine whether we are to archive or unarchive
         userParams = parameters.get('parameters')
         operation = userParams.get('operation')
-        if operation and operation == 'unarchive': 
-            # If unarchiving, change storage class back to STANDARD
-            # TODO: Needs testing with other storage classes
-            self.logger.info('Unarchive: Changing S3 Storage Class back from RR to Default')
+        self.logger.info('Operation == ' + str(operation))
+        if resource['type'] == 'file':
+            # If archiving/unarchiving a file, fetch db record from Clowder
             url = '%sapi/files/%s/metadata?key=%s' % (host, resource['id'], secret_key)
             self.logger.debug("sending request for file record: "+url)
             r = requests.get(url)
-            object_key = r.json().get('object-key')
-            obj = self.get_object(object_key)
-            self.change_storage_class(obj, 'STANDARD')
-
-            # Call Clowder API endpoint to mark file as "unarchived"
-#            url = '%sapi/files/%s/archive?key=%s' % (host, resource['id'], secret_key)
-#            self.logger.debug("sending request for file record: "+url)
-#            r = requests.post('%sapi/files/%s/unarchive?key=%s' % (host, resource['id'], secret_key))
-            return
-        elif operation and operation == 'archive':
-            if resource['type'] == 'file':
-                # If archiving a file, fetch db record from Clowder
-                url = '%sapi/files/%s/metadata?key=%s' % (host, resource['id'], secret_key)
-
-                self.logger.debug("sending request for file record: "+url)
-                r = requests.get(url)
-
-                # TODO: Check if object is already exists in dest storage
-                # TODO: If not exists, upload a copy with IT storage class
-                # If exists, change storage class on existing object
-                if 'json' in r.headers.get('Content-Type'):
-                    self.logger.debug(r.json())
-                    object_key = r.json().get('object-key')
-                    self.logger.info('Archive: Changing S3 Storage Class from Default to RR')
-                    obj = self.get_object(object_key)
-                    self.change_storage_class(obj, 'REDUCED_REDUNDANCY')
-
-                    # TODO: if source != dest, delete original file in favor of archived copy?
-                    # Call Clowder API endpoint to mark file as "archived"
-#                    url = '%sapi/files/%s/archive?key=%s' % (host, resource['id'], secret_key)
-#                    self.logger.debug("sending request for file record: "+url)
-#                    r = requests.post('%sapi/files/%s/archive?key=%s' % (host, resource['id'], secret_key))
-                else:
-                    self.logger.error('Response content is not in JSON format.. skipping: ' + str(r.headers.get('Content-Type')))
-                    return
+            if 'json' in r.headers.get('Content-Type'):
+                self.logger.debug(r.json())
             else:
-                self.logger.error('Unsupported resource type.. skipping: ' + str(resource['type']))
+                self.logger.error('Response content is not in JSON format.. skipping: ' + str(r.headers.get('Content-Type')))
+                return
+            file = r.json()
+
+            if operation and operation == 'unarchive': 
+                # If unarchiving, change storage class back to STANDARD
+                self.unarchive(host, secret_key, file)
+            elif operation and operation == 'archive':
+                # If archiving, change storage class from STANDARD to target
+                self.archive(host, secret_key, file)
+            else:
+                self.logger.error('Unrecognized operation specified... aborting: ' + str(operation))
                 return
         else:
-            self.logger.error('Invalid operation specified.. aborting: ' + str(operation))
+            self.logger.error('Unsupported resource type.. skipping: ' + str(resource['type']))
             return
 
-    def list_contains_key(self, list, keyFieldName, keyValue):
-        """
-        returns true iff the given key already exists in the list
-        :return:
-        """
-        for item in list:
-            if item[keyFieldName] == keyValue:
-                return True
-
-        return False
 
 if __name__ == "__main__":
     extractor = S3Archiver()

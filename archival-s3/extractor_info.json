@@ -22,5 +22,6 @@
   },
   "external_services": [],
   "dependencies": [],
-  "bibtex": []
+  "bibtex": [],
+  "categories": ["EXTRACT"]
 }
