@@ -14,12 +14,13 @@ For more information, see [Transitioning Objects Using Amazon S3 Lifecycle](http
 NOTE: This has not yet been tested with Minio.
 
 ## CLI Parameters
-| Parameter               | Default Value | Description                                                                        |
-| ----------------------- | ------------- | ---------------------------------------------------------------------------------- |
-| `--access-key <value>`  |       ``      |  AWS IAM AccessKey (provided by your AWS admin)                                    |
-| `--secret-key <value>`  |       ``      |  AWS IAM SecretKey (provided by your AWS admin)                                    |
-| `--region <value>`      |  `us-east-1`  |  AWS Region where bucket can be found (defaults to N. Virginia, ignored for Minio) |
-| `--bucket-name <value>` |       ``      |  AWS S3 bucket used where the file bytes currently live (they will not be moved)   |
+| Parameter                     | Default Value | Description                                                                        |
+| ----------------------------- | ------------- | ---------------------------------------------------------------------------------- |
+| `--service-endpoint <value>`  |       `https://s3.amazonaws.com`      |  AWS S3 Service Endpoint (e.g. "http://localhost:8000" for MinIO)                  |
+| `--access-key <value>`        |             |  AWS IAM AccessKey (provided by your AWS admin)                                    |
+| `--secret-key <value>`        |             |  AWS IAM SecretKey (provided by your AWS admin)                                    |
+| `--region <value>`            |  `us-east-1`  |  AWS Region where bucket can be found (defaults to N. Virginia, ignored for Minio) |
+| `--bucket-name <value>`       |             |  AWS S3 bucket used where the file bytes currently live (they will not be moved)   |
 
 
 ## Modes of Operation: Proof-of-Concept
