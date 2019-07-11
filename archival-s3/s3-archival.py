@@ -3,9 +3,10 @@
 import os
 import json
 import logging
-import boto3
 import requests
 
+import boto3
+from botocore.client import Config
 from botocore.exceptions import ClientError
 
 from pyclowder.extractors import Extractor
@@ -18,12 +19,16 @@ class S3Archiver(Extractor):
         self.name = 'S3Archiver'
 
         # read default parameters values from environment variables
+        default_service_endpoint= os.getenv('AWS_S3_SERVICE_ENDPOINT', 'https://s3.amazonaws.com')
         default_access_key = os.getenv('AWS_ACCESS_KEY', '')
         default_secret_key = os.getenv('AWS_SECRET_KEY', '')
-        default_bucket_name = os.getenv('AWS_BUCKET_NAME', 's3-clowder-test')
+        default_bucket_name = os.getenv('AWS_BUCKET_NAME', 'clowder-archive')
         default_aws_region = os.getenv('AWS_REGION', 'us-east-1')
 
         # add any additional arguments to parser
+        self.parser.add_argument('--service-endpoint', dest="service_endpoint",
+                                 default=default_service_endpoint,
+                                 help="AWS S3 Service Endpoint")
         self.parser.add_argument('--access-key', dest="access_key",
                                  default=default_access_key,
                                  help="AWS AccessKey")
@@ -43,12 +48,18 @@ class S3Archiver(Extractor):
         self.logger = logging.getLogger(self.name)
         self.logger.setLevel(logging.DEBUG)
 
+        self.service_endpoint = self.args.service_endpoint
         self.access_key = self.args.access_key
         self.secret_key = self.args.secret_key
         self.bucket_name = self.args.bucket_name
         self.aws_region = self.args.aws_region
 
-        # Set AWS AccessKey / SecretKey / BucketName / Region
+        # Set AWS ServiceEndpoint / AccessKey / SecretKey / BucketName / Region
+        if self.service_endpoint == '':
+            self.logger.critical('Invalid service endpoint - please provide an endpoint using the --service-endpoint argument or by setting the AWS_S3_SERVICE_ENDPOINT environment variable. An example value might be "http://localhost:8000" to point at a MinIO server running locally.')
+
+            exit(1)
+
         if self.access_key == '':
             self.logger.critical('Invalid access key - please provide an access key using the --access-key argument or by setting the AWS_ACCESS_KEY environment variable.')
             exit(1)
@@ -58,7 +69,7 @@ class S3Archiver(Extractor):
             exit(1)
 
         if self.bucket_name == '':
-            self.logger.critical('Invalid bucket name - please provide a bucket name using the --bucket-name argument or by setting the AWS_BUCKET_NAME environment variable.')
+            self.logger.critical('Invalid bucket name - please provide a bucket name using the --bucket-name argument or by setting the AWS_BUCKET_NAME environment variable. Note that bucket names should be DNS-compliant, if possible.')
             exit(1)
 
 
@@ -67,7 +78,12 @@ class S3Archiver(Extractor):
             aws_secret_access_key=self.secret_key,
         )
 
-        self.s3 = self.session.resource('s3', self.aws_region)
+        self.s3 = self.session.resource('s3',
+                                endpoint_url=self.service_endpoint,
+                                aws_access_key_id=self.access_key,
+                                aws_secret_access_key=self.secret_key,
+                                config=Config(signature_version='s3v4'),
+                                region_name=self.aws_region)
 
         # TODO: Call wait_until_exists on startup? Create bucket on startup?
         # this would also verify credentials/permissions for access
@@ -105,7 +121,7 @@ class S3Archiver(Extractor):
                'MetadataDirective': 'COPY'
              }
            )
-           print('Copied successfully!')
+           self.logger.debug('S3 object copied successfully')
        except ClientError as e:
            self.logger.error(e)
 
