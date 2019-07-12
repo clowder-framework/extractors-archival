@@ -16,7 +16,7 @@ NOTE: This has not yet been tested with Minio.
 ## CLI Parameters
 | Parameter                     | Default Value | Description                                                                        |
 | ----------------------------- | ------------- | ---------------------------------------------------------------------------------- |
-| `--service-endpoint <value>`  |       `https://s3.amazonaws.com`      |  AWS S3 Service Endpoint (e.g. "http://localhost:8000" for MinIO)                  |
+| `--service-endpoint <value>`  |       `https://s3.amazonaws.com`      |  AWS S3 Service Endpoint (e.g. "http://localhost:8000" for MinIO, "https://s3-us-east-2.amazonaws.com" for regions besides the default, etc)                  |
 | `--access-key <value>`        |             |  AWS IAM AccessKey (provided by your AWS admin)                                    |
 | `--secret-key <value>`        |             |  AWS IAM SecretKey (provided by your AWS admin)                                    |
 | `--region <value>`            |  `us-east-1`  |  AWS Region where bucket can be found (defaults to N. Virginia, ignored for Minio) |
