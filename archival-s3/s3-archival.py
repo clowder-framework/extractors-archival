@@ -57,7 +57,6 @@ class S3Archiver(Extractor):
         # Set AWS ServiceEndpoint / AccessKey / SecretKey / BucketName / Region
         if self.service_endpoint == '':
             self.logger.critical('Invalid service endpoint - please provide an endpoint using the --service-endpoint argument or by setting the AWS_S3_SERVICE_ENDPOINT environment variable. An example value might be "http://localhost:8000" to point at a MinIO server running locally.')
-
             exit(1)
 
         if self.access_key == '':
@@ -80,8 +79,8 @@ class S3Archiver(Extractor):
 
         self.s3 = self.session.resource('s3',
                                 endpoint_url=self.service_endpoint,
-                                aws_access_key_id=self.access_key,
-                                aws_secret_access_key=self.secret_key,
+                                #aws_access_key_id=self.access_key,
+                                #aws_secret_access_key=self.secret_key,
                                 config=Config(signature_version='s3v4'),
                                 region_name=self.aws_region)
 
@@ -97,15 +96,9 @@ class S3Archiver(Extractor):
            self.logger.info('Object Key: ' + str(obj.key))
            return obj
        except ClientError as e:
+           self.logger.error('Get object failed:')
            self.logger.error(e)
            
-    def test_upload(self, obj):
-       try:
-           response = obj.put(Body=b'example bytes')
-           return response
-       except ClientError as e:
-           self.logger.error(e)
-
     def change_storage_class(self, obj, storage_class='STANDARD'):
        copy_source = {
            'Bucket': obj.bucket_name,
@@ -123,25 +116,36 @@ class S3Archiver(Extractor):
            )
            self.logger.debug('S3 object copied successfully')
        except ClientError as e:
-           self.logger.error(e)
+           # Propagate error up to the caller
+           raise ClientError(e)
 
     def archive(self, host, secret_key, file):
         object_key = file.get('object-key')
         self.logger.info('Archive: Changing S3 Storage Class from Default to RR')
         obj = self.get_object(object_key)
-        self.change_storage_class(obj, 'REDUCED_REDUNDANCY')
+        try:
+            self.change_storage_class(obj, 'REDUCED_REDUNDANCY')
 
-        # Call Clowder API endpoint to mark file as "archived"
-        resp = requests.post('%sapi/files/%s/archive?key=%s' % (host, file['id'], secret_key))
+            # Call Clowder API endpoint to mark file as "archived"
+            # NOTE: this won't be called if a ClientError is encountered changing the storage class
+            resp = requests.post('%sapi/files/%s/archive?key=%s' % (host, file['id'], secret_key))
+        except ClientError as e:
+            # Catch the propagated error here
+            self.logger.error(e)
 
     def unarchive(self, host, secret_key, file):
         self.logger.info('Unarchive: Changing S3 Storage Class back from RR to Default')
         object_key = file.get('object-key')
         obj = self.get_object(object_key)
-        self.change_storage_class(obj, 'STANDARD')
+        try:
+            self.change_storage_class(obj, 'STANDARD')
 
-        # Call Clowder API endpoint to mark file as "unarchived"
-        resp = requests.post('%sapi/files/%s/unarchive?key=%s' % (host, file['id'], secret_key))
+            # Call Clowder API endpoint to mark file as "unarchived"
+            # NOTE: this won't be called if a ClientError is encountered changing the storage class
+            resp = requests.post('%sapi/files/%s/unarchive?key=%s' % (host, file['id'], secret_key))
+        except ClientError as e:
+            # Catch the propagated error here
+            self.logger.error(e)
 
     def process_message(self, connector, host, secret_key, resource, parameters):
         action = parameters.get('action')
