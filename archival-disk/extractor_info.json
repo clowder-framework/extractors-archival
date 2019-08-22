@@ -23,5 +23,24 @@
   "external_services": [],
   "dependencies": [],
   "bibtex": [],
-  "categories": ["EXTRACT"]
+  "categories": ["EXTRACT"],
+  "parameters": {
+    "schema": {
+      "operation": {
+        "type": "string",
+        "title": "Operation",
+        "enum": [ "archive", "unarchive" ],
+        "default": "archive"
+      }
+    },
+    "form": [
+      {
+        "key": "operation",
+        "type": "radios",
+        "activeClass": "btn-success",
+        "default": "archive"
+      }
+    ],
+    "value": {"operation": "archive"}
+  }
 }
