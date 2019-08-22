@@ -36,11 +36,8 @@
     "form": [
       {
         "key": "operation",
-        "type": "radios",
-        "activeClass": "btn-success",
-        "default": "archive"
+        "type": "radios"
       }
-    ],
-    "value": {"operation": "archive"}
+    ]
   }
 }
