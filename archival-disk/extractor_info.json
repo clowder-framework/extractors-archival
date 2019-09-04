@@ -26,18 +26,28 @@
   "categories": ["EXTRACT"],
   "parameters": {
     "schema": {
-      "operation": {
-        "type": "string",
-        "title": "Operation",
-        "enum": [ "archive", "unarchive" ],
-        "default": "archive"
+      "properties": {
+        "operation": {
+          "type": "string",
+          "title": "Operation",
+          "enum": [ "archive", "unarchive" ],
+          "default": "archive"
+        }
       }
     },
     "form": [
       {
         "key": "operation",
-        "type": "radios"
+        "type": "radiobuttons",
+        "activeClass": "btn-success",
+        "default": "archive",
+        "notitle": true,
+        "titleMap": {
+          "archive": "Archive",
+          "unarchive": "Unarchive"
+        }
       }
-    ]
+    ],
+    "value": {"operation": "archive"}
   }
 }
