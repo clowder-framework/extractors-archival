@@ -1,4 +1,9 @@
-FROM clowder/pyclowder:2
+#
+# Uncomment when pyclowder uses Python 3+
+#
+#FROM clowder/pyclowder:2
+
+FROM python:3
 
 MAINTAINER Mike Lambert <lambert8@illinois.edu>
 
@@ -7,14 +12,16 @@ ENV RABBITMQ_QUEUE="ncsa.archival.disk" \
     RABBITMQ_EXCHANGE="clowder" \
     MAIN_SCRIPT="disk-archival.py"
 
-COPY requirements.txt entrypoint.sh disk-archival.py extractor_info.json /home/clowder/
+WORKDIR /home/clowder
+COPY requirements.txt /home/clowder/
 
-RUN apt-get update && apt-get -y install python-dev \
-    python-pip \
-    software-properties-common && \
-    apt-add-repository ppa:ubuntugis/ppa && \
-    pip install --upgrade pip==9.0.3 && \
+RUN apt-get -qq update && \
+    apt-get -qq install --no-install-recommends \
+      software-properties-common && \
+    pip install pyclowder && \
     pip install -r /home/clowder/requirements.txt
+
+COPY entrypoint.sh disk-archival.py extractor_info.json /home/clowder/
 
 ENTRYPOINT ["/home/clowder/entrypoint.sh"]
 CMD ["extractor"]
