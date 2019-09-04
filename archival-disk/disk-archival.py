@@ -56,8 +56,9 @@ class DiskArchiver(Extractor):
         self.logger.info('ARCHIVE_SOURCE_DIRECTORY: ' + self.archive_source)
         self.logger.info('ARCHIVE_TARGET_DIRECTORY: ' + self.archive_target)
 
-    def check_message(self, connector, host, secret_key, resource, parameters):
-        return CheckMessage.bypass
+    # FIXME: Specifying CheckMessage.bypass below skips substitution of MOUNTED_PATHS
+    #def check_message(self, connector, host, secret_key, resource, parameters):
+    #    return CheckMessage.bypass
 
     def archive(self, host, secret_key, file):
         segments = file.get('filepath').split(self.archive_source)
@@ -114,23 +115,16 @@ class DiskArchiver(Extractor):
         operation = userParams.get('operation')
         self.logger.info('Operation == ' + str(operation))
         if resource['type'] == 'file':
-            # If archiving/unarchiving a file, fetch db record from Clowder
-            url = '%sapi/files/%s/metadata?key=%s' % (host, resource['id'], secret_key)
-            self.logger.debug("sending request for file record: "+url)
-            r = requests.get(url)
-            if 'json' in r.headers.get('Content-Type'):
-                self.logger.debug(r.json())
-            else:
-                self.logger.error('Response content is not in JSON format.. skipping: ' + str(r.headers.get('Content-Type')))
-                return
-            file = r.json()
+            local_paths = resource['local_paths']
+            if local_paths == []:
+                self.logger.error("Error: File not found locally... aborting: " + str(resource))
 
             if operation and operation == 'unarchive':
                 # If unarchiving, move the file from target to source
-                self.unarchive(host, secret_key, file)
+                self.unarchive(host, secret_key, { 'id': resource['id'], 'filepath': local_paths[0] })
             elif operation and operation == 'archive':
                 # If archiving, move the file from source to target
-                self.archive(host, secret_key, file)
+                self.archive(host, secret_key, { 'id': resource['id'], 'filepath': local_paths[0] })
             else:
                 self.logger.error('Unrecognized operation specified... aborting: ' + str(operation))
                 return
