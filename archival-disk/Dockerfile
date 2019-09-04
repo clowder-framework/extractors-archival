@@ -2,12 +2,12 @@ FROM clowder/pyclowder:2
 
 MAINTAINER Mike Lambert <lambert8@illinois.edu>
 
-ENV RABBITMQ_QUEUE="ncsa.archival.s3" \
+ENV RABBITMQ_QUEUE="ncsa.archival.disk" \
     RABBITMQ_URI="" \
     RABBITMQ_EXCHANGE="clowder" \
-    MAIN_SCRIPT="s3-archival.py"
+    MAIN_SCRIPT="disk-archival.py"
 
-COPY requirements.txt entrypoint.sh s3-archival.py extractor_info.json /home/clowder/
+COPY requirements.txt entrypoint.sh disk-archival.py extractor_info.json /home/clowder/
 
 RUN apt-get update && apt-get -y install python-dev \
     python-pip \
