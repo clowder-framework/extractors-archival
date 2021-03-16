@@ -9,27 +9,33 @@
   "repository": [
     {
       "repType": "git",
-      "repUrl": "https://git.ncsa.illinois.edu/syngenta/extractors-archival-s3.git"},
+      "repUrl": "https://git.ncsa.illinois.edu/syngenta/extractors-archival-s3.git"
+    },
     {
       "repType": "docker",
       "repUrl": "clowder/extractors-archival-s3"
-    }],
+    }
+  ],
   "process": {
-    "file":
-    [
+    "file": [
       "s3/manualsubmission"
     ]
   },
   "external_services": [],
   "dependencies": [],
   "bibtex": [],
-  "categories": ["EXTRACT"],
+  "categories": [
+    "EXTRACT"
+  ],
   "parameters": {
     "schema": {
       "operation": {
         "type": "string",
         "title": "Operation",
-        "enum": [ "archive", "unarchive" ],
+        "enum": [
+          "archive",
+          "unarchive"
+        ],
         "default": "archive"
       }
     },
@@ -38,6 +44,11 @@
         "key": "operation",
         "type": "select"
       }
+    ]
+  },
+  "changelog": {
+    "1.0.0": [
+      "initial release"
     ]
   }
 }

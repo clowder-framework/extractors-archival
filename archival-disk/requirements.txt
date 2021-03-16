@@ -1,1 +1,1 @@
-requests
+pyclowder==2.4.0
