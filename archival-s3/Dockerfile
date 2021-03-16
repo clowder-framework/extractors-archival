@@ -1,20 +1,21 @@
-FROM clowder/pyclowder:2
+FROM python:3.7-alpine
 
-MAINTAINER Mike Lambert <lambert8@illinois.edu>
+LABEL maintainer="Mike Lambert <lambert8@illinois.edu>"
 
-ENV RABBITMQ_QUEUE="ncsa.archival.s3" \
-    RABBITMQ_URI="" \
-    RABBITMQ_EXCHANGE="clowder" \
-    MAIN_SCRIPT="s3-archival.py"
+ARG VERSION="unknown"
+ARG BUILDNUMBER="unknown"
+ARG GITSHA1="unknown"
 
-COPY requirements.txt entrypoint.sh s3-archival.py extractor_info.json /home/clowder/
+# environemnt variables
+ENV VERSION=${VERSION} \
+    BUILDNUMBER=${BUILDNUMBER} \
+    GITSHA1=${GITSHA1} \
+    RABBITMQ_QUEUE="ncsa.file.digest" \
+    EXTRACTOR_HASHLIST="md5","sha1","sha224","sha256","sha384","sha512"
 
-RUN apt-get update && apt-get -y install python-dev \
-    python-pip \
-    software-properties-common && \
-    apt-add-repository ppa:ubuntugis/ppa && \
-    pip install --upgrade pip==9.0.3 && \
-    pip install -r /home/clowder/requirements.txt
+WORKDIR /extractor
+COPY requirements.txt ./
+RUN pip install -r requirements.txt
 
-ENTRYPOINT ["/home/clowder/entrypoint.sh"]
-CMD ["extractor"]
+COPY s3-archival.py extractor_info.json ./
+CMD python s3-archival.py

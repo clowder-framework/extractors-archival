@@ -1,27 +1,21 @@
-#
-# Uncomment when pyclowder uses Python 3+
-#
-#FROM clowder/pyclowder:2
+FROM python:3.7-alpine
 
-FROM python:3
+LABEL maintainer="Mike Lambert <lambert8@illinois.edu>"
 
-MAINTAINER Mike Lambert <lambert8@illinois.edu>
+ARG VERSION="unknown"
+ARG BUILDNUMBER="unknown"
+ARG GITSHA1="unknown"
 
-ENV RABBITMQ_QUEUE="ncsa.archival.disk" \
-    RABBITMQ_URI="" \
-    RABBITMQ_EXCHANGE="clowder" \
-    MAIN_SCRIPT="disk-archival.py"
+# environemnt variables
+ENV VERSION=${VERSION} \
+    BUILDNUMBER=${BUILDNUMBER} \
+    GITSHA1=${GITSHA1} \
+    RABBITMQ_QUEUE="ncsa.file.digest" \
+    EXTRACTOR_HASHLIST="md5","sha1","sha224","sha256","sha384","sha512"
 
-WORKDIR /home/clowder
-COPY requirements.txt /home/clowder/
+WORKDIR /extractor
+COPY requirements.txt ./
+RUN pip install -r requirements.txt
 
-RUN apt-get -qq update && \
-    apt-get -qq install --no-install-recommends \
-      software-properties-common && \
-    pip install pyclowder && \
-    pip install -r /home/clowder/requirements.txt
-
-COPY entrypoint.sh disk-archival.py extractor_info.json /home/clowder/
-
-ENTRYPOINT ["/home/clowder/entrypoint.sh"]
-CMD ["extractor"]
+COPY disk-archival.py extractor_info.json ./
+CMD python disk-archival.py
