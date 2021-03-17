@@ -21,19 +21,19 @@ NOTE: This has not yet been tested with Minio.
 | `--secret-key <value>`        |             |  AWS IAM SecretKey (provided by your AWS admin)                                    |
 | `--region <value>`            |  `us-east-1`  |  AWS Region where bucket can be found (defaults to N. Virginia, ignored for Minio) |
 | `--bucket-name <value>`       |             |  AWS S3 bucket used where the file bytes currently live (they will not be moved)   |
+| `--archived-storage-class <value>`       |   `INTELLIGENT_TIERING`          |  AWS S3 StorageClass applied to archive files   |
+| `--unarchived-storage-class <value>`       |  `STANDARD`           |  AWS S3 StorageClass applied to unarchived files  |
 
 
 ## Modes of Operation: Proof-of-Concept
 
-* Submitting a file to the extractor with an extra parameter of `{"operation":"archive"}` will change the storage class of the file in S3 from `STANDARD` to `REDUCED_REDUNDANCY`.
-* Simlarly, a parameter of `{"operation":"unarchive"}` will change the storage class of the file in S3 from `REDUCED_REDUNDANCY` back to `STANDARD`.
+* Submitting a file to the extractor with an extra parameter of `{"operation":"archive"}` will change the storage class of the file in S3 from `STANDARD` to `INTELLIGENT_TIERING`.
+* Simlarly, a parameter of `{"operation":"unarchive"}` will change the storage class of the file in S3 from `INTELLIGENT_TIERING` back to `STANDARD`.
 
-NOTE: `REDUCED_REDUNDANCY` is a placeholder value for testing - it is not recommended for us by AWS.
 
 
 ## TODOs
 
-* Parameterize archived (or unarchived) storage class(es)?
 * Support archiving files from disk/mongo into S3?
 * Test other stroage classes - namely STANDARD_IA and/or ONEZONE_IA?
 * Test/support the GLACIER or DEEP_ARCHIVE storage classes? Are these costs justified?
