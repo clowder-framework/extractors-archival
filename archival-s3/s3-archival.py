@@ -11,6 +11,7 @@ from botocore.exceptions import ClientError
 
 from pyclowder.extractors import Extractor
 import pyclowder.files
+#from pyclowder.utils import CheckMessage
 
 class S3Archiver(Extractor):
     def __init__(self):
@@ -107,8 +108,6 @@ class S3Archiver(Extractor):
        try:
            # S3 Object (bucket_name and key are identifiers)
            obj = self.s3.Object(bucket_name=self.bucket_name, key=object_key)
-           self.logger.info('Bucket Name: ' + str(obj.bucket_name))
-           self.logger.info('Object Key: ' + str(obj.key))
            return obj
        except ClientError as e:
            self.logger.error('Get object failed:')
@@ -162,6 +161,11 @@ class S3Archiver(Extractor):
             # Catch the propagated error here
             self.logger.error(e)
 
+    # FIXME: Specifying "bypass" here does not actually download the file
+    # The next time the auto-archive loop runs, this file will be archived again
+    #def check_message(self, connector, host, secret_key, resource, parameters):
+    #    return CheckMessage.bypass
+
     def process_message(self, connector, host, secret_key, resource, parameters):
         action = parameters.get('action')
         if action and action != 'manual-submission':
@@ -170,11 +174,9 @@ class S3Archiver(Extractor):
         # Parse user parameters to determine whether we are to archive or unarchive
         userParams = parameters.get('parameters')
         operation = userParams.get('operation')
-        self.logger.info('Operation == ' + str(operation))
         if resource['type'] == 'file':
             # If archiving/unarchiving a file, fetch db record from Clowder
             url = '%sapi/files/%s/metadata?key=%s' % (host, resource['id'], secret_key)
-            self.logger.debug("sending request for file record: "+url)
             r = requests.get(url)
             if 'json' in r.headers.get('Content-Type'):
                 self.logger.debug(r.json())
