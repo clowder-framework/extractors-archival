@@ -1,4 +1,4 @@
-FROM python:3.7-alpine
+FROM python:3.9
 
 LABEL maintainer="Mike Lambert <lambert8@illinois.edu>"
 
@@ -10,8 +10,11 @@ ARG GITSHA1="unknown"
 ENV VERSION=${VERSION} \
     BUILDNUMBER=${BUILDNUMBER} \
     GITSHA1=${GITSHA1} \
-    RABBITMQ_QUEUE="ncsa.file.digest" \
-    EXTRACTOR_HASHLIST="md5","sha1","sha224","sha256","sha384","sha512"
+    RABBITMQ_QUEUE="ncsa.archival.disk" \
+    ARCHIVE_SOURCE_DIRECTORY="/home/clowder/clowder/data/uploads/" \
+    ARCHIVE_TARGET_DIRECTORY="/home/clowder/clowder/data/archive/" \
+    MOUNTED_PATHS='{}'
+    
 
 WORKDIR /extractor
 COPY requirements.txt ./
