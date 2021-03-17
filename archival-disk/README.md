@@ -16,6 +16,8 @@ surrounding archival on disk.
 | `--archive-source <value>`  | `/home/clowder/data/uploads/` |  The path on disk where Clowder stores its file bytes                              |
 | `--archive-target <value>`  | `/home/clowder/data/archive/` |  The path on disk where file bytes should be archived                              |
 
+NOTE: MOUNTED_PATHS configuration is currently required without modifications to the Python code, since we require direct write access to the data directory. This prevents us from needing to download the file to archive or unarchive it. See [Mounted Paths](https://opensource.ncsa.illinois.edu/confluence/display/CATS/Advanced+Configuration+Options#AdvancedConfigurationOptions-MountedPaths) for notes about configuring the `MOUNTED_PATHS` environment variable.
+
 
 ## Modes of Operation: Proof-of-Concept
 
@@ -26,5 +28,4 @@ surrounding archival on disk.
 ## TODOs
 
 * Support archiving files from disk/mongo into S3? Vice versa?
-* Testing
 
