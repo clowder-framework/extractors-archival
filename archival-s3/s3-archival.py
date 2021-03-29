@@ -11,6 +11,7 @@ from botocore.exceptions import ClientError
 
 from pyclowder.extractors import Extractor
 import pyclowder.files
+#from pyclowder.utils import CheckMessage
 
 class S3Archiver(Extractor):
     def __init__(self):
@@ -24,6 +25,8 @@ class S3Archiver(Extractor):
         default_secret_key = os.getenv('AWS_SECRET_KEY', '')
         default_bucket_name = os.getenv('AWS_BUCKET_NAME', 'clowder-archive')
         default_aws_region = os.getenv('AWS_REGION', 'us-east-1')
+        default_unarchived_storage_class = os.getenv('AWS_UNARCHIVED_STORAGE_CLASS', 'STANDARD')
+        default_archived_storage_class = os.getenv('AWS_ARCHIVED_STORAGE_CLASS', 'INTELLIGENT_TIERING')
 
         # add any additional arguments to parser
         self.parser.add_argument('--service-endpoint', dest="service_endpoint",
@@ -41,6 +44,12 @@ class S3Archiver(Extractor):
         self.parser.add_argument('--region', dest="aws_region",
                                  default=default_aws_region,
                                  help="AWS Region")
+        self.parser.add_argument('--unarchived-storage-class', dest="aws_unarchived_storage_class",
+                                 default=default_unarchived_storage_class,
+                                 help="AWS StorageClass for unarchived files")
+        self.parser.add_argument('--archived-storage-class', dest="aws_archived_storage_class",
+                                 default=default_archived_storage_class,
+                                 help="AWS StorageClass for archived files")
 
         # parse command line and setup default logging configuration
         self.setup()
@@ -53,6 +62,8 @@ class S3Archiver(Extractor):
         self.secret_key = self.args.secret_key
         self.bucket_name = self.args.bucket_name
         self.aws_region = self.args.aws_region
+        self.archived_storage_class = self.args.aws_archived_storage_class
+        self.unarchived_storage_class = self.args.aws_unarchived_storage_class
 
         # Set AWS ServiceEndpoint / AccessKey / SecretKey / BucketName / Region
         if self.service_endpoint == '':
@@ -71,6 +82,13 @@ class S3Archiver(Extractor):
             self.logger.critical('Invalid bucket name - please provide a bucket name using the --bucket-name argument or by setting the AWS_BUCKET_NAME environment variable. Note that bucket names should be DNS-compliant, if possible.')
             exit(1)
 
+        if self.archived_storage_class == '':
+            self.logger.critical('Invalid StorageClass specified for archived file - please provide a StorageClass for archived files by settings the --archived-storage-class argument or by setting the AWS_ARCHIVED_STORAGE_CLASS environment variable.')
+            exit(1)
+
+        if self.unarchived_storage_class == '':
+            self.logger.critical('Invalid StorageClass specified for unarchived file - please provide a StorageClass for unarchived files by settings the --unarchived-storage-class argument or by setting the AWS_UNARCHIVED_STORAGE_CLASS environment variable.')
+            exit(1)
 
         self.session = boto3.Session(
             aws_access_key_id=self.access_key,
@@ -79,8 +97,6 @@ class S3Archiver(Extractor):
 
         self.s3 = self.session.resource('s3',
                                 endpoint_url=self.service_endpoint,
-                                #aws_access_key_id=self.access_key,
-                                #aws_secret_access_key=self.secret_key,
                                 config=Config(signature_version='s3v4'),
                                 region_name=self.aws_region)
 
@@ -92,14 +108,12 @@ class S3Archiver(Extractor):
        try:
            # S3 Object (bucket_name and key are identifiers)
            obj = self.s3.Object(bucket_name=self.bucket_name, key=object_key)
-           self.logger.info('Bucket Name: ' + str(obj.bucket_name))
-           self.logger.info('Object Key: ' + str(obj.key))
            return obj
        except ClientError as e:
            self.logger.error('Get object failed:')
            self.logger.error(e)
            
-    def change_storage_class(self, obj, storage_class='STANDARD'):
+    def change_storage_class(self, obj, storage_class):
        copy_source = {
            'Bucket': obj.bucket_name,
            'Key': obj.key
@@ -120,11 +134,11 @@ class S3Archiver(Extractor):
            raise ClientError(e)
 
     def archive(self, host, secret_key, file):
+        self.logger.info('Archive: Changing S3 StorageClass to ' + self.archived_storage_class)
         object_key = file.get('object-key')
-        self.logger.info('Archive: Changing S3 Storage Class from Default to RR')
         obj = self.get_object(object_key)
         try:
-            self.change_storage_class(obj, 'REDUCED_REDUNDANCY')
+            self.change_storage_class(obj, self.archived_storage_class)
 
             # Call Clowder API endpoint to mark file as "archived"
             # NOTE: this won't be called if a ClientError is encountered changing the storage class
@@ -134,11 +148,11 @@ class S3Archiver(Extractor):
             self.logger.error(e)
 
     def unarchive(self, host, secret_key, file):
-        self.logger.info('Unarchive: Changing S3 Storage Class back from RR to Default')
+        self.logger.info('Unarchive: Changing S3 StorageClass to ' + self.unarchived_storage_class)
         object_key = file.get('object-key')
         obj = self.get_object(object_key)
         try:
-            self.change_storage_class(obj, 'STANDARD')
+            self.change_storage_class(obj, self.unarchived_storage_class)
 
             # Call Clowder API endpoint to mark file as "unarchived"
             # NOTE: this won't be called if a ClientError is encountered changing the storage class
@@ -146,6 +160,11 @@ class S3Archiver(Extractor):
         except ClientError as e:
             # Catch the propagated error here
             self.logger.error(e)
+
+    # FIXME: Specifying "bypass" here does not actually download the file
+    # The next time the auto-archive loop runs, this file will be archived again
+    #def check_message(self, connector, host, secret_key, resource, parameters):
+    #    return CheckMessage.bypass
 
     def process_message(self, connector, host, secret_key, resource, parameters):
         action = parameters.get('action')
@@ -155,11 +174,9 @@ class S3Archiver(Extractor):
         # Parse user parameters to determine whether we are to archive or unarchive
         userParams = parameters.get('parameters')
         operation = userParams.get('operation')
-        self.logger.info('Operation == ' + str(operation))
         if resource['type'] == 'file':
             # If archiving/unarchiving a file, fetch db record from Clowder
             url = '%sapi/files/%s/metadata?key=%s' % (host, resource['id'], secret_key)
-            self.logger.debug("sending request for file record: "+url)
             r = requests.get(url)
             if 'json' in r.headers.get('Content-Type'):
                 self.logger.debug(r.json())

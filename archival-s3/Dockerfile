@@ -1,4 +1,4 @@
-FROM python:3.7-alpine
+FROM python:3.9
 
 LABEL maintainer="Mike Lambert <lambert8@illinois.edu>"
 
@@ -10,8 +10,15 @@ ARG GITSHA1="unknown"
 ENV VERSION=${VERSION} \
     BUILDNUMBER=${BUILDNUMBER} \
     GITSHA1=${GITSHA1} \
-    RABBITMQ_QUEUE="ncsa.file.digest" \
-    EXTRACTOR_HASHLIST="md5","sha1","sha224","sha256","sha384","sha512"
+    RABBITMQ_QUEUE="ncsa.archival.s3" \
+    AWS_REGION="us-east-1" \
+    AWS_SERVICE_ENDPOINT="https://s3.amazonaws.com" \
+    AWS_ARCHIVED_STORAGE_CLASS="INTELLIGENT_TIERING" \
+    AWS_UNARCHIVED_STORAGE_CLASS="STANDARD" \
+    AWS_ACCESS_KEY="" \
+    AWS_SECRET_KEY="" \
+    AWS_BUCKET_NAME=""
+    
 
 WORKDIR /extractor
 COPY requirements.txt ./
