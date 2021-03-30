@@ -11,7 +11,7 @@ from botocore.exceptions import ClientError
 
 from pyclowder.extractors import Extractor
 import pyclowder.files
-#from pyclowder.utils import CheckMessage
+from pyclowder.utils import CheckMessage
 
 class S3Archiver(Extractor):
     def __init__(self):
