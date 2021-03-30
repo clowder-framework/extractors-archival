@@ -161,10 +161,9 @@ class S3Archiver(Extractor):
             # Catch the propagated error here
             self.logger.error(e)
 
-    # FIXME: Specifying "bypass" here does not actually download the file
-    # The next time the auto-archive loop runs, this file will be archived again
-    #def check_message(self, connector, host, secret_key, resource, parameters):
-    #    return CheckMessage.bypass
+    # No need to download the file bytes, we're just working with S3
+    def check_message(self, connector, host, secret_key, resource, parameters):
+        return CheckMessage.bypass
 
     def process_message(self, connector, host, secret_key, resource, parameters):
         action = parameters.get('action')
