@@ -104,9 +104,6 @@ class DiskArchiver(Extractor):
         # Call Clowder API endpoint to mark file as "archived"
         resp = requests.post('%sapi/files/%s/unarchive?key=%s' % (host, file['id'], secret_key))
 
-        # Trigger a download of this file (so that auto-archival doesn't immediately re-archive it)
-        pyclowder.files.download(connector, host, secret_key, file['id'])
-
     def moveFile(self, source, dest):
         # Ensure destination folder exists
         os.makedirs(os.path.dirname(dest), exist_ok=True)

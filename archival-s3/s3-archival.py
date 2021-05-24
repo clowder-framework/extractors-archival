@@ -136,6 +136,8 @@ class S3Archiver(Extractor):
     def archive(self, host, secret_key, file):
         if file['status'] == 'ARCHIVED':
             self.logger.warn('File already archived: ' + file['id'] + '... Skipping.')
+            return
+
         self.logger.info('Archive: Changing S3 StorageClass to ' + self.archived_storage_class)
         object_key = file.get('object-key')
         obj = self.get_object(object_key)
@@ -152,6 +154,8 @@ class S3Archiver(Extractor):
     def unarchive(self, host, connector, secret_key, file):
         if file['status'] == 'PROCESSED':
             self.logger.warn('File already unarchived: ' + file['id'] + '... Skipping.')
+            return
+
         self.logger.info('Unarchive: Changing S3 StorageClass to ' + self.unarchived_storage_class)
         object_key = file.get('object-key')
         obj = self.get_object(object_key)
@@ -161,9 +165,6 @@ class S3Archiver(Extractor):
             # Call Clowder API endpoint to mark file as "unarchived"
             # NOTE: this won't be called if a ClientError is encountered changing the storage class
             resp = requests.post('%sapi/files/%s/unarchive?key=%s' % (host, file['id'], secret_key))
-
-            # Trigger a download of this file (so that auto-archival doesn't immediately re-archive it)
-            pyclowder.files.download(connector, host, secret_key, file['id'])
         except ClientError as e:
             # Catch the propagated error here
             self.logger.error(e)
