@@ -61,6 +61,10 @@ class DiskArchiver(Extractor):
     #    return CheckMessage.bypass
 
     def archive(self, host, secret_key, file):
+        if file['status'] == 'ARCHIVED':
+            self.logger.warn('File already archived: ' + file['id'] + '... Skipping.')
+            return
+
         segments = file.get('filepath').split(self.archive_source)
         if (len(segments) <= 1):
             self.logger.error('Input path (%s) is not in the Clowder data directory (%s). Aborting.' % (file.get('filepath'), self.archive_source) )
@@ -79,6 +83,10 @@ class DiskArchiver(Extractor):
         # IMPORTANT NOTE: /api/files/:id will now return 404 when attempting to download bytes
 
     def unarchive(self, host, secret_key, file):
+        if file['status'] == 'PROCESSED':
+            self.logger.warn('File already unarchived: ' + file['id'] + '... Skipping.')
+            return
+
         # Build up the path to our archived file bytes
         # NOTE: loader_id / filepath still reflects a Clowder data path
         segments = file.get('filepath').split(self.archive_source)
@@ -96,6 +104,8 @@ class DiskArchiver(Extractor):
         # Call Clowder API endpoint to mark file as "archived"
         resp = requests.post('%sapi/files/%s/unarchive?key=%s' % (host, file['id'], secret_key))
 
+        # Trigger a download of this file (so that auto-archival doesn't immediately re-archive it)
+        pyclowder.files.download(connector, host, secret_key, file['id'])
 
     def moveFile(self, source, dest):
         # Ensure destination folder exists
@@ -121,7 +131,7 @@ class DiskArchiver(Extractor):
 
             if operation and operation == 'unarchive':
                 # If unarchiving, move the file from target to source
-                self.unarchive(host, secret_key, { 'id': resource['id'], 'filepath': local_paths[0] })
+                self.unarchive(host, connector, secret_key, { 'id': resource['id'], 'filepath': local_paths[0] })
             elif operation and operation == 'archive':
                 # If archiving, move the file from source to target
                 self.archive(host, secret_key, { 'id': resource['id'], 'filepath': local_paths[0] })
