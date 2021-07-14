@@ -1,7 +1,7 @@
 {
   "@context": "http://clowder.ncsa.illinois.edu/contexts/extractors.jsonld",
   "name": "ncsa.archival.s3",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Archive files from Clowder to AWS S3",
   "author": "Mike Lambert <lambert8@illinois.edu>",
   "contributors": [],
