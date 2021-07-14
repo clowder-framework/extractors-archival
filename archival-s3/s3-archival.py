@@ -134,6 +134,10 @@ class S3Archiver(Extractor):
            raise ClientError(e)
 
     def archive(self, host, secret_key, file):
+        if file['status'] == 'ARCHIVED':
+            self.logger.warn('File already archived: ' + file['id'] + '... Skipping.')
+            return
+
         self.logger.info('Archive: Changing S3 StorageClass to ' + self.archived_storage_class)
         object_key = file.get('object-key')
         obj = self.get_object(object_key)
@@ -147,7 +151,11 @@ class S3Archiver(Extractor):
             # Catch the propagated error here
             self.logger.error(e)
 
-    def unarchive(self, host, secret_key, file):
+    def unarchive(self, host, connector, secret_key, file):
+        if file['status'] == 'PROCESSED':
+            self.logger.warn('File already unarchived: ' + file['id'] + '... Skipping.')
+            return
+
         self.logger.info('Unarchive: Changing S3 StorageClass to ' + self.unarchived_storage_class)
         object_key = file.get('object-key')
         obj = self.get_object(object_key)
@@ -186,7 +194,7 @@ class S3Archiver(Extractor):
 
             if operation and operation == 'unarchive': 
                 # If unarchiving, change storage class back to STANDARD
-                self.unarchive(host, secret_key, file)
+                self.unarchive(host, connector, secret_key, file)
             elif operation and operation == 'archive':
                 # If archiving, change storage class from STANDARD to target
                 self.archive(host, secret_key, file)

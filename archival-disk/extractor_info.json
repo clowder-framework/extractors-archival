@@ -1,7 +1,7 @@
 {
   "@context": "http://clowder.ncsa.illinois.edu/contexts/extractors.jsonld",
   "name": "ncsa.archival.disk",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Archive files from Clowder to another location on disk",
   "author": "Mike Lambert <lambert8@illinois.edu>",
   "contributors": [],
